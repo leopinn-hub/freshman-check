@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>入社直前・当日状況報告</title>
+  <style>
+    :root {
+      --primary: #2563eb;
+      --bg: #f8fafc;
+      --card: #ffffff;
+      --text: #1e293b;
+      --border: #e2e8f0;
+      --danger: #ef4444;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      margin: 0;
+      padding: 16px;
+      display: flex;
+      justify-content: center;
+    }
+    .container {
+      width: 100%;
+      max-width: 480px;
+      background: var(--card);
+      border-radius: 12px;
+      padding: 24px 20px;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+      box-sizing: border-box;
+    }
+    h1 {
+      font-size: 1.25rem;
+      margin-top: 0;
+      margin-bottom: 8px;
+      text-align: center;
+    }
+    .user-info {
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      padding: 12px;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      margin-bottom: 20px;
+    }
+    .user-info p { margin: 4px 0; }
+    .section-title {
+      font-size: 0.95rem;
+      font-weight: bold;
+      margin-bottom: 10px;
+    }
+    /* ステータス選択（トグルボタン風ラジオ） */
+    .status-group {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    .status-btn {
+      position: relative;
+    }
+    .status-btn input[type="radio"] {
+      position: absolute;
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+    .status-btn label {
+      display: block;
+      padding: 12px 8px;
+      text-align: center;
+      background: #f1f5f9;
+      border: 2px solid var(--border);
+      border-radius: 8px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    /* 選択時のスタイリング */
+    .status-btn input[type="radio"]:checked + label {
+      background: #dbeafe;
+      border-color: var(--primary);
+      color: var(--primary);
+    }
+    /* 遅延・体調不良は警告色 */
+    .status-btn.warning input[type="radio"]:checked + label {
+      background: #fee2e2;
+      border-color: var(--danger);
+      color: var(--danger);
+    }
+
+    textarea {
+      width: 100%;
+      height: 80px;
+      padding: 10px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      box-sizing: border-box;
+      font-size: 0.9rem;
+      resize: vertical;
+      margin-bottom: 20px;
+    }
+    button.submit-btn {
+      width: 100%;
+      background: var(--primary);
+      color: white;
+      border: none;
+      padding: 14px;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    button.submit-btn:disabled {
+      background: #94a3b8;
+      cursor: not-allowed;
+    }
+    #message {
+      margin-top: 16px;
+      padding: 12px;
+      border-radius: 8px;
+      text-align: center;
+      font-size: 0.9rem;
+      display: none;
+    }
+    .msg-success { background: #dcfce7; color: #15803d; }
+    .msg-error { background: #fee2e2; color: #b91c1c; }
+    .loading-overlay {
+      display: none;
+      text-align: center;
+      margin-bottom: 12px;
+      font-size: 0.85rem;
+      color: #64748b;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <h1>直前・当日状況確認</h1>
+
+  <div id="loading" class="loading-overlay">データ読み込み中...</div>
+
+  <!-- 学生情報表示エリア -->
+  <div class="user-info">
+    <p><strong>氏名：</strong><span id="disp-name">--</span></p>
+    <p><strong>拠点：</strong><span id="disp-branch">--</span></p>
+  </div>
+
+  <form id="reportForm">
+    <div class="section-title">1. 現在のステータスを選択</div>
+    <div class="status-group">
+      <div class="status-btn">
+        <input type="radio" id="s1" name="status" value="体調OK">
+        <label for="s1">体調OK</label>
+      </div>
+      <div class="status-btn">
+        <input type="radio" id="s2" name="status" value="出発完了">
+        <label for="s2">出発完了</label>
+      </div>
+      <div class="status-btn warning">
+        <input type="radio" id="s3" name="status" value="遅延">
+        <label for="s3">遅延あり</label>
+      </div>
+      <div class="status-btn warning">
+        <input type="radio" id="s4" name="status" value="体調不良">
+        <label for="s4">体調不良</label>
+      </div>
+    </div>
+
+    <div class="section-title">2. 連絡事項・自由記述（任意）</div>
+    <textarea id="note" placeholder="遅延理由や体調の詳細、到着予定時間などがあれば記入してください。"></textarea>
+
+    <button type="submit" id="submitBtn" class="submit-btn">送信・更新する</button>
+  </form>
+
+  <div id="message"></div>
+</div>
+
+<script>
+  // 【最重要設定】ステップ4で発行するGAS Web AppのURLをここに貼り付けます
+  const GAS_API_URL = "https://script.google.com/macros/s/AKfycbwaJM2Fc2vh_wT76LgxjlKiGcMV-X3qR76BzhNzolCLkOLjK7qyCiU68gDqNs2jQxaCMA/exec";
+
+  // URLから ?id=S001 のパラメータを取得
+  const urlParams = new URLSearchParams(window.location.search);
+  const studentId = urlParams.get('id');
+
+  const nameEl = document.getElementById('disp-name');
+  const branchEl = document.getElementById('disp-branch');
+  const formEl = document.getElementById('reportForm');
+  const submitBtn = document.getElementById('submitBtn');
+  const loadingEl = document.getElementById('loading');
+  const messageEl = document.getElementById('message');
+
+  // 初期読み込み処理（現在のステータス取得）
+  window.addEventListener('DOMContentLoaded', async () => {
+    if (!studentId) {
+      showMessage("URLに学生ID（?id=...）が含まれていません。メールのリンクから開き直してください。", true);
+      submitBtn.disabled = true;
+      return;
+    }
+
+    loadingEl.style.display = "block";
+    try {
+      // CORS回避のため doGet へJSONPまたは標準fetch（GAS側でCORSヘッダー返却対応）
+      const res = await fetch(`${GAS_API_URL}?id=${encodeURIComponent(studentId)}`);
+      const data = await res.json();
+
+      if (data.success) {
+        nameEl.textContent = data.student.name;
+        branchEl.textContent = data.student.branch;
+        
+        // 既存の入力があれば画面に反映（上書き・確認用）
+        if (data.student.status) {
+          const radio = document.querySelector(`input[name="status"][value="${data.student.status}"]`);
+          if (radio) radio.checked = true;
+        }
+        if (data.student.note) {
+          document.getElementById('note').value = data.student.note;
+        }
+      } else {
+        showMessage(data.message || "該当する学生データが見つかりません。", true);
+        submitBtn.disabled = true;
+      }
+    } catch (err) {
+      console.error(err);
+      showMessage("データの初期読み込みに失敗しました。", true);
+    } finally {
+      loadingEl.style.display = "none";
+    }
+  });
+
+  // 送信処理（doPost）
+  formEl.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const selectedStatus = document.querySelector('input[name="status"]:checked');
+    if (!selectedStatus) {
+      alert("ステータスを1つ選択してください。");
+      return;
+    }
+
+    const payload = {
+      student_id: studentId,
+      status: selectedStatus.value,
+      note: document.getElementById('note').value
+    };
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = "送信中...";
+    messageEl.style.display = "none";
+
+    try {
+      /**
+       * 【CORS回避のキモ】
+       * Content-Type を text/plain に設定してPOSTすることで、
+       * ブラウザの「プリフライトリクエスト（OPTIONS通信）」を回避します。
+       * GAS側の e.postData.contents でJSONをパースします。
+       */
+      const res = await fetch(GAS_API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'text/plain;charset=utf-8',
+        },
+        body: JSON.stringify(payload)
+      });
+
+      const result = await res.json();
+
+      if (result.success) {
+        showMessage("ステータスを正常に送信・更新しました！", false);
+      } else {
+        showMessage("送信エラー: " + result.message, true);
+      }
+    } catch (err) {
+      console.error(err);
+      showMessage("通信エラーが発生しました。時間を置いて再度お試しください。", true);
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.textContent = "送信・更新する";
+    }
+  });
+
+  function showMessage(msg, isError) {
+    messageEl.textContent = msg;
+    messageEl.className = isError ? "msg-error" : "msg-success";
+    messageEl.style.display = "block";
+  }
+</script>
+
+</body>
+</html>
