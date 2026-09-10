@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>【事前確認】集合場所・移動経路・持ち物チェック</title>
+  <style>
+    :root {
+      --primary: #2563eb;
+      --bg: #f8fafc;
+      --card: #ffffff;
+      --text: #1e293b;
+      --border: #e2e8f0;
+      --success: #16a34a;
+    }
+    body { font-family: -apple-system, sans-serif; background: var(--bg); color: var(--text); margin:0; padding:16px; display:flex; justify-content:center; }
+    .container { width:100%; max-width:480px; background:var(--card); border-radius:12px; padding:20px; box-shadow:0 4px 6px -1px rgba(0,0,0,0.1); box-sizing:border-box; }
+    h1 { font-size:1.2rem; text-align:center; margin-top:0; }
+    .user-box { background:#eff6ff; border:1px solid #bfdbfe; padding:10px 12px; border-radius:8px; font-size:0.85rem; margin-bottom:16px; }
+    .user-box p { margin:2px 0; }
+    .info-box { background:#f1f5f9; border:1px solid var(--border); padding:12px; border-radius:8px; font-size:0.9rem; margin-bottom:16px; }
+    .info-box h3 { margin:0 0 6px 0; font-size:0.95rem; color:var(--primary); }
+    .info-box p { margin:0; white-space:pre-wrap; font-size:0.85rem; line-height:1.4; }
+    
+    .check-item { display:flex; align-items:center; padding:10px 0; border-bottom:1px solid var(--border); }
+    .check-item input[type="checkbox"] { width:20px; height:20px; margin-right:12px; cursor:pointer; }
+    .check-item label { font-size:0.9rem; cursor:pointer; flex:1; line-height:1.3; }
+
+    button.submit-btn { width:100%; background:var(--primary); color:white; border:none; padding:14px; border-radius:8px; font-size:1rem; font-weight:bold; cursor:pointer; margin-top:20px; }
+    button.submit-btn:disabled { background:#94a3b8; }
+    #message { margin-top:16px; padding:12px; border-radius:8px; text-align:center; font-size:0.9rem; display:none; }
+    .msg-success { background:#dcfce7; color:#15803d; }
+    .msg-error { background:#fee2e2; color:#b91c1c; }
+    .link-box { text-align:center; margin-top:20px; font-size:0.85rem; }
+    .link-box a { color:var(--primary); font-weight:bold; text-decoration:none; }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <h1>赴任前 確認シート</h1>
+
+  <div class="user-box">
+    <p><strong>氏名：</strong><span id="disp-name">読み込み中...</span></p>
+    <p><strong>赴任日時：</strong><span id="disp-datetime">--</span></p>
+  </div>
+
+  <div class="info-box">
+    <h3>📍 あなたの集合場所</h3>
+    <p id="disp-place">読み込み中...</p>
+  </div>
+
+  <div class="info-box">
+    <h3>🚆 あなたの移動経路案内</h3>
+    <p id="disp-route">読み込み中...</p>
+  </div>
+
+  <div style="font-weight:bold; margin-bottom:8px;">🎒 持ち物準備チェック</div>
+  <form id="checkForm">
+    <div id="checklistContainer"></div>
+    <button type="submit" id="submitBtn" class="submit-btn">持ち物状況を保存する</button>
+  </form>
+
+  <div id="message"></div>
+
+  <div class="link-box">
+    <a id="dayOfLink" href="#">👉 当日の報告画面（直前・移動時）はこちら</a>
+  </div>
+</div>
+
+<!-- Firebase SDK モジュール読み込み -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+  import { getFirestore, doc, getDoc, setDoc, addDoc, collection } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyDeirkuuCbTTtwecu-V7lBM8urpFvyfVaw",
+    authDomain: "freshman-check-2026.firebaseapp.com",
+    projectId: "freshman-check-2026",
+    storageBucket: "freshman-check-2026.firebasestorage.app",
+    messagingSenderId: "127601072250",
+    appId: "1:127601072250:web:a6b460431e7bb43bd8c3c3"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+
+  const urlParams = new URLSearchParams(window.location.search);
+  const studentId = urlParams.get('id');
+
+  const nameEl = document.getElementById('disp-name');
+  const datetimeEl = document.getElementById('disp-datetime');
+  const placeEl = document.getElementById('disp-place');
+  const routeEl = document.getElementById('disp-route');
+  const containerEl = document.getElementById('checklistContainer');
+  const formEl = document.getElementById('checkForm');
+  const submitBtn = document.getElementById('submitBtn');
+  const messageEl = document.getElementById('message');
+
+  let currentMasterChecklist = [];
+
+  window.addEventListener('DOMContentLoaded', async () => {
+    if (!studentId) {
+      showMessage("URLに学生ID（?id=...）が含まれていません。", true);
+      submitBtn.disabled = true;
+      return;
+    }
+
+    document.getElementById('dayOfLink').href = `index.html?id=${encodeURIComponent(studentId)}`;
+
+    try {
+      const studentDocRef = doc(db, "students", studentId);
+      const studentSnap = await getDoc(studentDocRef);
+
+      if (studentSnap.exists()) {
+        const data = studentSnap.data();
+        nameEl.textContent = data.name || studentId;
+        datetimeEl.textContent = (data.arrival_date || "") + " " + (data.arrival_time || "");
+        placeEl.textContent = data.meeting_place || "指定なし";
+        routeEl.textContent = data.route_info || "指定なし";
+
+        if (data.master_checklist && data.master_checklist.trim() !== "") {
+          currentMasterChecklist = data.master_checklist.split(',').map(item => item.trim());
+        } else {
+          currentMasterChecklist = [
+            "マイナンバーカード（または通知カード）",
+            "入社承諾書・提出書類一式",
+            "印鑑（シャチハタ不可）",
+            "筆記用具・メモ帳",
+            "着替え・生活用品（3日分以上）"
+          ];
+        }
+
+        const savedStatus = data.checklist_status ? JSON.parse(data.checklist_status) : {};
+
+        containerEl.innerHTML = "";
+        currentMasterChecklist.forEach((item, index) => {
+          const isChecked = savedStatus[item] === true;
+          const div = document.createElement('div');
+          div.className = 'check-item';
+          div.innerHTML = `
+            <input type="checkbox" id="chk_${index}" value="${item}" ${isChecked ? 'checked' : ''}>
+            <label for="chk_${index}">${item}</label>
+          `;
+          containerEl.appendChild(div);
+        });
+
+      } else {
+        showMessage("該当する学生データが登録されていません。", true);
+        submitBtn.disabled = true;
+      }
+    } catch (err) {
+      console.error(err);
+      showMessage("データの読み込みに失敗しました。", true);
+    }
+  });
+
+  formEl.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const currentStatus = {};
+    let allChecked = true;
+
+    currentMasterChecklist.forEach((item, index) => {
+      const chk = document.getElementById(`chk_${index}`);
+      const isChecked = chk ? chk.checked : false;
+      currentStatus[item] = isChecked;
+      if (!isChecked) allChecked = false;
+    });
+
+    const nowStr = new Date().toLocaleString("ja-JP");
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = "保存中...";
+
+    try {
+      const studentDocRef = doc(db, "students", studentId);
+      await setDoc(studentDocRef, {
+        checklist_status: JSON.stringify(currentStatus),
+        pre_check_done: allChecked,
+        updated_at: nowStr
+      }, { merge: true });
+
+      await addDoc(collection(db, "logs"), {
+        student_id: studentId,
+        action: "持ち物チェック更新",
+        details: JSON.stringify(currentStatus),
+        timestamp: nowStr
+      });
+
+      if (allChecked) {
+        showMessage("持ち物の準備がすべて完了しました！", false);
+      } else {
+        showMessage("現在のチェック状態を保存しました。（一部未チェックの持ち物があります）", false);
+      }
+    } catch (err) {
+      console.error(err);
+      showMessage("保存エラーが発生しました。", true);
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.textContent = "持ち物状況を保存する";
+    }
+  });
+
+  function showMessage(msg, isError) {
+    messageEl.textContent = msg;
+    messageEl.className = isError ? "msg-error" : "msg-success";
+    messageEl.style.display = "block";
+  }
+</script>
+
+</body>
+</html>
