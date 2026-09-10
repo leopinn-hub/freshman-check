@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>直前・当日状況確認</title>
+  <style>
+    :root {
+      --primary: #2563eb;
+      --bg: #f8fafc;
+      --card: #ffffff;
+      --text: #1e293b;
+      --border: #e2e8f0;
+      --danger: #ef4444;
+    }
+    body { font-family: -apple-system, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 16px; display: flex; justify-content: center; }
+    .container { width: 100%; max-width: 480px; background: var(--card); border-radius: 12px; padding: 24px 20px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); box-sizing: border-box; }
+    h1 { font-size: 1.25rem; margin-top: 0; margin-bottom: 8px; text-align: center; }
+    .user-info { background: #eff6ff; border: 1px solid #bfdbfe; padding: 12px; border-radius: 8px; font-size: 0.85rem; margin-bottom: 16px; }
+    .user-info p { margin: 3px 0; }
+    
+    .admin-msg-box {
+      display: none;
+      background: #fef2f2;
+      border: 2px solid var(--danger);
+      padding: 12px 14px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+    }
+    .admin-msg-box h3 { margin: 0 0 4px 0; font-size: 0.95rem; color: var(--danger); }
+    .admin-msg-box p { margin: 0; font-size: 0.9rem; font-weight: bold; white-space: pre-wrap; line-height: 1.4; color: #991b1b; }
+
+    .section-title { font-size: 0.95rem; font-weight: bold; margin-bottom: 10px; }
+    .status-group { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+    .status-btn { position: relative; }
+    .status-btn input[type="radio"] { position: absolute; opacity: 0; width: 0; height: 0; }
+    .status-btn label { display: block; padding: 12px 8px; text-align: center; background: #f1f5f9; border: 2px solid var(--border); border-radius: 8px; font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+    .status-btn input[type="radio"]:checked + label { background: #dbeafe; border-color: var(--primary); color: var(--primary); }
+    .status-btn.warning input[type="radio"]:checked + label { background: #fee2e2; border-color: var(--danger); color: var(--danger); }
+
+    textarea { width: 100%; height: 90px; padding: 10px; border: 1px solid var(--border); border-radius: 8px; box-sizing: border-box; font-size: 0.9rem; resize: vertical; margin-bottom: 20px; }
+    button.submit-btn { width: 100%; background: var(--primary); color: white; border: none; padding: 14px; border-radius: 8px; font-size: 1rem; font-weight: bold; cursor: pointer; }
+    button.submit-btn:disabled { background: #94a3b8; }
+    #message { margin-top: 16px; padding: 12px; border-radius: 8px; text-align: center; font-size: 0.9rem; display: none; }
+    .msg-success { background: #dcfce7; color: #15803d; }
+    .msg-error { background: #fee2e2; color: #b91c1c; }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <h1>直前・当日状況確認</h1>
+
+  <div class="user-info">
+    <p><strong>氏名：</strong><span id="disp-name">読み込み中...</span></p>
+    <p><strong>所属拠点：</strong><span id="disp-branch">--</span></p>
+  </div>
+
+  <div id="adminMsgBox" class="admin-msg-box">
+    <h3>📍 人事担当者からの指示・連絡</h3>
+    <p id="adminMsgText">--</p>
+  </div>
+
+  <form id="reportForm">
+    <div class="section-title">1. 現在のステータスを選択</div>
+    <div class="status-group">
+      <div class="status-btn">
+        <input type="radio" id="s1" name="status" value="体調OK">
+        <label for="s1">体調OK</label>
+      </div>
+      <div class="status-btn">
+        <input type="radio" id="s2" name="status" value="出発完了">
+        <label for="s2">出発完了</label>
+      </div>
+      <div class="status-btn warning">
+        <input type="radio" id="s3" name="status" value="遅延">
+        <label for="s3">遅延あり</label>
+      </div>
+      <div class="status-btn warning">
+        <input type="radio" id="s4" name="status" value="迷子・遅延SOS">
+        <label for="s4">🆘 迷子・遅延SOS</label>
+      </div>
+    </div>
+
+    <div class="section-title">2. 連絡事項・SOS詳細（任意）</div>
+    <textarea id="note" placeholder="例：〇〇駅の北口で迷っています。現在地にコンビニがあります。"></textarea>
+
+    <button type="submit" id="submitBtn" class="submit-btn">送信・更新する</button>
+  </form>
+
+  <div id="message"></div>
+</div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+  import { getFirestore, doc, onSnapshot, setDoc, addDoc, collection } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyDeirkuuCbTTtwecu-V7lBM8urpFvyfVaw",
+    authDomain: "freshman-check-2026.firebaseapp.com",
+    projectId: "freshman-check-2026",
+    storageBucket: "freshman-check-2026.firebasestorage.app",
+    messagingSenderId: "127601072250",
+    appId: "1:127601072250:web:a6b460431e7bb43bd8c3c3"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+
+  const urlParams = new URLSearchParams(window.location.search);
+  const studentId = urlParams.get('id');
+
+  const nameEl = document.getElementById('disp-name');
+  const branchEl = document.getElementById('disp-branch');
+  const adminMsgBox = document.getElementById('adminMsgBox');
+  const adminMsgText = document.getElementById('adminMsgText');
+  const formEl = document.getElementById('reportForm');
+  const submitBtn = document.getElementById('submitBtn');
+  const messageEl = document.getElementById('message');
+
+  window.addEventListener('DOMContentLoaded', () => {
+    if (!studentId) {
+      showMessage("URLに学生ID（?id=...）が含まれていません。", true);
+      submitBtn.disabled = true;
+      return;
+    }
+
+    const studentDocRef = doc(db, "students", studentId);
+    onSnapshot(studentDocRef, (docSnap) => {
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        nameEl.textContent = data.name || studentId;
+        branchEl.textContent = data.branch || "未指定";
+
+        if (data.status) {
+          const radio = document.querySelector(`input[name="status"][value="${data.status}"]`);
+          if (radio) radio.checked = true;
+        }
+        if (data.note && document.activeElement !== document.getElementById('note')) {
+          document.getElementById('note').value = data.note;
+        }
+
+        if (data.admin_message && data.admin_message.trim() !== "") {
+          adminMsgText.textContent = data.admin_message;
+          adminMsgBox.style.display = "block";
+        } else {
+          adminMsgBox.style.display = "none";
+        }
+      } else {
+        showMessage("該当する学生データがありません。", true);
+        submitBtn.disabled = true;
+      }
+    });
+  });
+
+  formEl.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const selectedStatus = document.querySelector('input[name="status"]:checked');
+    if (!selectedStatus) {
+      alert("ステータスを1つ選択してください。");
+      return;
+    }
+
+    const nowStr = new Date().toLocaleString("ja-JP");
+    const statusVal = selectedStatus.value;
+    const noteVal = document.getElementById('note').value;
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = "送信中...";
+
+    try {
+      const studentDocRef = doc(db, "students", studentId);
+      await setDoc(studentDocRef, {
+        status: statusVal,
+        note: noteVal,
+        updated_at: nowStr
+      }, { merge: true });
+
+      await addDoc(collection(db, "logs"), {
+        student_id: studentId,
+        status: statusVal,
+        note: noteVal,
+        timestamp: nowStr
+      });
+
+      showMessage("ステータスを正常に送信・更新しました！", false);
+    } catch (err) {
+      console.error(err);
+      showMessage("送信エラーが発生しました。", true);
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.textContent = "送信・更新する";
+    }
+  });
+
+  function showMessage(msg, isError) {
+    messageEl.textContent = msg;
+    messageEl.className = isError ? "msg-error" : "msg-success";
+    messageEl.style.display = "block";
+  }
+</script>
+
+</body>
+</html>
