@@ -72,7 +72,7 @@
 
   <div class="checklist-title-box">
     <div class="section-title">🎒 持ち物準備チェック</div>
-    <!-- 注意書き（赤字で配置） -->
+    <!-- 注意書き（赤字） -->
     <div class="save-notice">※チェックしたら必ず保存！</div>
   </div>
 
@@ -142,8 +142,13 @@
         placeEl.textContent = data.meeting_place || "指定なし";
         routeEl.textContent = data.route_info || "指定なし";
 
+        // 半角カンマ・全角カンマ・改行・読点に対応した確実な分割ロジック
         if (data.master_checklist) {
-          currentMasterList = data.master_checklist.split(',').map(s => s.trim()).filter(Boolean);
+          const rawStr = String(data.master_checklist);
+          currentMasterList = rawStr
+            .split(/[,，\n]/)
+            .map(s => s.trim())
+            .filter(Boolean);
         } else {
           currentMasterList = [];
         }
