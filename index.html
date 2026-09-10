@@ -7,6 +7,7 @@
   <style>
     :root {
       --primary: #2563eb;
+      --success: #10b981;
       --bg: #f8fafc;
       --card: #ffffff;
       --text: #1e293b;
@@ -18,10 +19,15 @@
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 16px; display: flex; justify-content: center; }
     .container { width: 100%; max-width: 480px; background: var(--card); border-radius: 12px; padding: 24px 20px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); box-sizing: border-box; }
     h1 { font-size: 1.25rem; margin-top: 0; margin-bottom: 8px; text-align: center; color: var(--text); }
+    
     .user-info { background: #eff6ff; border: 1px solid #bfdbfe; padding: 12px 16px; border-radius: 8px; font-size: 0.9rem; margin-bottom: 16px; }
     .user-info p { margin: 4px 0; }
     
-    /* 人事部からの指示表示エリア（超目立つ警告デザイン） */
+    /* 緊急問い合わせ電話窓口の常時表示 */
+    .emergency-call-box { background: #f1f5f9; border: 1px solid #cbd5e1; padding: 8px 12px; border-radius: 6px; font-size: 0.8rem; color: #475569; margin-bottom: 16px; text-align: center; }
+    .emergency-call-box strong { color: var(--danger); }
+
+    /* 人事部からの指示表示エリア */
     .admin-msg-box {
       background: var(--warning-bg);
       border: 3px solid var(--warning-border);
@@ -46,25 +52,29 @@
 
     .section-title { font-size: 0.95rem; font-weight: bold; margin-bottom: 10px; }
     
-    /* ステータス選択ボタン（1列配置で見やすく変更） */
     .status-group { display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px; }
     .status-btn { position: relative; }
     .status-btn input[type="radio"] { position: absolute; opacity: 0; width: 0; height: 0; }
     .status-btn label { display: block; padding: 12px 14px; text-align: left; background: #f8fafc; border: 2px solid var(--border); border-radius: 8px; font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: all 0.2s; }
     .status-btn input[type="radio"]:checked + label { background: #dbeafe; border-color: var(--primary); color: var(--primary); }
     
-    /* 警告・注意ステータスの色付け */
+    /* ステータス別の強調カラー */
+    .status-btn.success input[type="radio"]:checked + label { background: #d1fae5; border-color: var(--success); color: #065f46; }
     .status-btn.warning input[type="radio"]:checked + label { background: #fef3c7; border-color: #f59e0b; color: #b45309; }
     .status-btn.danger input[type="radio"]:checked + label { background: #fee2e2; border-color: var(--danger); color: var(--danger); }
 
-    textarea { width: 100%; height: 90px; padding: 10px; border: 1px solid var(--border); border-radius: 8px; box-sizing: border-box; font-size: 0.9rem; resize: vertical; margin-bottom: 20px; }
+    .note-guide { font-size: 0.8rem; color: #64748b; margin-bottom: 6px; }
+    textarea { width: 100%; height: 95px; padding: 10px; border: 1px solid var(--border); border-radius: 8px; box-sizing: border-box; font-size: 0.85rem; resize: vertical; margin-bottom: 8px; }
+    
+    /* SOS時の注意書き */
+    .sos-notice { background: #fff1f2; border: 1px solid #fecdd3; color: #9f1239; font-size: 0.8rem; padding: 8px 12px; border-radius: 6px; margin-bottom: 16px; font-weight: bold; }
+
     button.submit-btn { width: 100%; background: var(--primary); color: white; border: none; padding: 14px; border-radius: 8px; font-size: 1rem; font-weight: bold; cursor: pointer; }
     button.submit-btn:disabled { background: #94a3b8; }
-    #message { margin-top: 16px; padding: 12px; border-radius: 8px; text-align: center; font-size: 0.9rem; display: none; }
+    #message { margin-top: 16px; padding: 12px; border-radius: 8px; text-align: center; font-size: 0.85rem; display: none; line-height: 1.4; }
     .msg-success { background: #dcfce7; color: #15803d; }
     .msg-error { background: #fee2e2; color: #b91c1c; }
 
-    /* 赴任前ページへの戻りリンク */
     .link-box { text-align: center; margin-top: 24px; font-size: 0.85rem; }
     .link-box a { color: var(--primary); font-weight: bold; text-decoration: none; }
   </style>
@@ -79,7 +89,11 @@
     <p><strong>所属拠点：</strong><span id="disp-branch">--</span></p>
   </div>
 
-  <!-- 人事部からの指示表示エリア（最初から常時表示） -->
+  <div class="emergency-call-box">
+    📞 電波障害や通信エラー時は無理をせず電話：<strong>03-XXXX-XXXX</strong>（本部連絡先）
+  </div>
+
+  <!-- 人事部からの指示表示エリア（常時表示） -->
   <div id="adminMsgBox" class="admin-msg-box">
     <h3>🔔【重要】人事担当者からの個別指示</h3>
     <p id="adminMsgText" class="empty">※現在、人事担当者からの個別指示はありません。</p>
@@ -91,6 +105,11 @@
       <div class="status-btn">
         <input type="radio" id="s1" name="status" value="体調問題なし・出発OK">
         <label for="s1">体調問題なし・出発OK</label>
+      </div>
+      <!-- 追加された「集合場所に到着完了」ステータス -->
+      <div class="status-btn success">
+        <input type="radio" id="s0" name="status" value="集合場所に到着完了">
+        <label for="s0">📍 集合場所に到着完了</label>
       </div>
       <div class="status-btn warning">
         <input type="radio" id="s2" name="status" value="体調不良（赴任可能）">
@@ -110,15 +129,19 @@
       </div>
     </div>
 
-    <div class="section-title">2. 連絡事項・SOS詳細（任意）</div>
-    <textarea id="note" placeholder="例：38度の熱があります。/ 〇〇駅で迷っています。"></textarea>
+    <div class="section-title">2. 連絡事項・詳細状況</div>
+    <div class="note-guide">※遅延時は「乗車路線・何分遅れ」、迷子時は「頭上の看板・周囲の目印」を詳しく入力してください。</div>
+    <textarea id="note" placeholder="例：JR中央線が約15分遅延中 / 丸の内地下中央口のセブンイレブン前にいます"></textarea>
+
+    <div class="sos-notice">
+      ⚠️ SOS送信後は二次パニック防止のため、絶対にその場から移動せず指示をお待ちください。
+    </div>
 
     <button type="submit" id="submitBtn" class="submit-btn">送信・更新する</button>
   </form>
 
   <div id="message"></div>
 
-  <!-- 赴任前確認ページへの戻りリンク -->
   <div class="link-box">
     <a id="preCheckLink" href="#">👈 赴任前確認シート（集合場所・持ち物）はこちら</a>
   </div>
@@ -175,7 +198,6 @@
           document.getElementById('note').value = data.note;
         }
 
-        // 人事部からの指示（admin_message）の表示ロジック（常時表示 ＋ 入力時は赤枠パルス表示）
         if (data.admin_message && data.admin_message.trim() !== "") {
           adminMsgText.textContent = data.admin_message;
           adminMsgText.classList.remove('empty');
@@ -227,7 +249,7 @@
       showMessage("ステータスを正常に送信・更新しました！", false);
     } catch (err) {
       console.error(err);
-      showMessage("送信エラーが発生しました。", true);
+      showMessage("送信エラーが発生しました。電波の良い場所で再試行するか、上記のお問い合わせ電話番号へご連絡ください。", true);
     } finally {
       submitBtn.disabled = false;
       submitBtn.textContent = "送信・更新する";
