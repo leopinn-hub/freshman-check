@@ -19,6 +19,7 @@
     .user-info { background: #eff6ff; border: 1px solid #bfdbfe; padding: 12px; border-radius: 8px; font-size: 0.85rem; margin-bottom: 16px; }
     .user-info p { margin: 3px 0; }
     
+    /* 人事部からの指示表示エリア */
     .admin-msg-box {
       display: none;
       background: #fef2f2;
@@ -44,6 +45,10 @@
     #message { margin-top: 16px; padding: 12px; border-radius: 8px; text-align: center; font-size: 0.9rem; display: none; }
     .msg-success { background: #dcfce7; color: #15803d; }
     .msg-error { background: #fee2e2; color: #b91c1c; }
+
+    /* 赴任前ページへの戻りリンク表示エリア */
+    .link-box { text-align: center; margin-top: 24px; font-size: 0.85rem; }
+    .link-box a { color: var(--primary); font-weight: bold; text-decoration: none; }
   </style>
 </head>
 <body>
@@ -56,6 +61,7 @@
     <p><strong>所属拠点：</strong><span id="disp-branch">--</span></p>
   </div>
 
+  <!-- 人事部からの指示表示エリア -->
   <div id="adminMsgBox" class="admin-msg-box">
     <h3>📍 人事担当者からの指示・連絡</h3>
     <p id="adminMsgText">--</p>
@@ -89,6 +95,11 @@
   </form>
 
   <div id="message"></div>
+
+  <!-- 赴任前確認ページへの戻りリンク -->
+  <div class="link-box">
+    <a id="preCheckLink" href="#">👈 赴任前確認シート（集合場所・持ち物）はこちら</a>
+  </div>
 </div>
 
 <script type="module">
@@ -125,6 +136,10 @@
       return;
     }
 
+    // 赴任前確認ページ（pre_check.html）へのリンクにIDを付与
+    document.getElementById('preCheckLink').href = `pre_check.html?id=${encodeURIComponent(studentId)}`;
+
+    // リアルタイム通信（スプレッドシートの指示が即座に表示される）
     const studentDocRef = doc(db, "students", studentId);
     onSnapshot(studentDocRef, (docSnap) => {
       if (docSnap.exists()) {
@@ -140,6 +155,7 @@
           document.getElementById('note').value = data.note;
         }
 
+        // 人事部からのメッセージ（admin_message）があれば表示
         if (data.admin_message && data.admin_message.trim() !== "") {
           adminMsgText.textContent = data.admin_message;
           adminMsgBox.style.display = "block";
