@@ -10,34 +10,52 @@
       --bg: #f8fafc;
       --card: #ffffff;
       --text: #1e293b;
-      --border: #e2e8f0;
+      --border: #cbd5e1;
       --danger: #ef4444;
+      --warning-bg: #fef3c7;
+      --warning-border: #f59e0b;
     }
-    body { font-family: -apple-system, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 16px; display: flex; justify-content: center; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 16px; display: flex; justify-content: center; }
     .container { width: 100%; max-width: 480px; background: var(--card); border-radius: 12px; padding: 24px 20px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); box-sizing: border-box; }
-    h1 { font-size: 1.25rem; margin-top: 0; margin-bottom: 8px; text-align: center; }
-    .user-info { background: #eff6ff; border: 1px solid #bfdbfe; padding: 12px; border-radius: 8px; font-size: 0.85rem; margin-bottom: 16px; }
-    .user-info p { margin: 3px 0; }
+    h1 { font-size: 1.25rem; margin-top: 0; margin-bottom: 8px; text-align: center; color: var(--text); }
+    .user-info { background: #eff6ff; border: 1px solid #bfdbfe; padding: 12px 16px; border-radius: 8px; font-size: 0.9rem; margin-bottom: 16px; }
+    .user-info p { margin: 4px 0; }
     
-    /* 人事部からの指示表示エリア */
+    /* 人事部からの指示表示エリア（超目立つ警告デザイン） */
     .admin-msg-box {
-      display: none;
-      background: #fef2f2;
-      border: 2px solid var(--danger);
-      padding: 12px 14px;
-      border-radius: 8px;
+      background: var(--warning-bg);
+      border: 3px solid var(--warning-border);
+      padding: 14px 16px;
+      border-radius: 10px;
       margin-bottom: 20px;
+      box-shadow: 0 2px 8px rgba(245, 158, 11, 0.25);
     }
-    .admin-msg-box h3 { margin: 0 0 4px 0; font-size: 0.95rem; color: var(--danger); }
-    .admin-msg-box p { margin: 0; font-size: 0.9rem; font-weight: bold; white-space: pre-wrap; line-height: 1.4; color: #991b1b; }
+    .admin-msg-box.has-msg {
+      border-color: var(--danger);
+      background: #fff1f2;
+      animation: pulse-border 2s infinite;
+    }
+    @keyframes pulse-border {
+      0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+      70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+    }
+    .admin-msg-box h3 { margin: 0 0 6px 0; font-size: 1rem; color: #991b1b; display: flex; align-items: center; gap: 6px; }
+    .admin-msg-box p { margin: 0; font-size: 0.95rem; font-weight: bold; white-space: pre-wrap; line-height: 1.5; color: #7f1d1d; }
+    .admin-msg-box p.empty { color: #64748b; font-weight: normal; font-style: italic; }
 
     .section-title { font-size: 0.95rem; font-weight: bold; margin-bottom: 10px; }
-    .status-group { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+    
+    /* ステータス選択ボタン（1列配置で見やすく変更） */
+    .status-group { display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px; }
     .status-btn { position: relative; }
     .status-btn input[type="radio"] { position: absolute; opacity: 0; width: 0; height: 0; }
-    .status-btn label { display: block; padding: 12px 8px; text-align: center; background: #f1f5f9; border: 2px solid var(--border); border-radius: 8px; font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+    .status-btn label { display: block; padding: 12px 14px; text-align: left; background: #f8fafc; border: 2px solid var(--border); border-radius: 8px; font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: all 0.2s; }
     .status-btn input[type="radio"]:checked + label { background: #dbeafe; border-color: var(--primary); color: var(--primary); }
-    .status-btn.warning input[type="radio"]:checked + label { background: #fee2e2; border-color: var(--danger); color: var(--danger); }
+    
+    /* 警告・注意ステータスの色付け */
+    .status-btn.warning input[type="radio"]:checked + label { background: #fef3c7; border-color: #f59e0b; color: #b45309; }
+    .status-btn.danger input[type="radio"]:checked + label { background: #fee2e2; border-color: var(--danger); color: var(--danger); }
 
     textarea { width: 100%; height: 90px; padding: 10px; border: 1px solid var(--border); border-radius: 8px; box-sizing: border-box; font-size: 0.9rem; resize: vertical; margin-bottom: 20px; }
     button.submit-btn { width: 100%; background: var(--primary); color: white; border: none; padding: 14px; border-radius: 8px; font-size: 1rem; font-weight: bold; cursor: pointer; }
@@ -46,7 +64,7 @@
     .msg-success { background: #dcfce7; color: #15803d; }
     .msg-error { background: #fee2e2; color: #b91c1c; }
 
-    /* 赴任前ページへの戻りリンク表示エリア */
+    /* 赴任前ページへの戻りリンク */
     .link-box { text-align: center; margin-top: 24px; font-size: 0.85rem; }
     .link-box a { color: var(--primary); font-weight: bold; text-decoration: none; }
   </style>
@@ -61,35 +79,39 @@
     <p><strong>所属拠点：</strong><span id="disp-branch">--</span></p>
   </div>
 
-  <!-- 人事部からの指示表示エリア -->
+  <!-- 人事部からの指示表示エリア（最初から常時表示） -->
   <div id="adminMsgBox" class="admin-msg-box">
-    <h3>📍 人事担当者からの指示・連絡</h3>
-    <p id="adminMsgText">--</p>
+    <h3>🔔【重要】人事担当者からの個別指示</h3>
+    <p id="adminMsgText" class="empty">※現在、人事担当者からの個別指示はありません。</p>
   </div>
 
   <form id="reportForm">
     <div class="section-title">1. 現在のステータスを選択</div>
     <div class="status-group">
       <div class="status-btn">
-        <input type="radio" id="s1" name="status" value="体調OK">
-        <label for="s1">体調OK</label>
-      </div>
-      <div class="status-btn">
-        <input type="radio" id="s2" name="status" value="出発完了">
-        <label for="s2">出発完了</label>
+        <input type="radio" id="s1" name="status" value="体調問題なし・出発OK">
+        <label for="s1">体調問題なし・出発OK</label>
       </div>
       <div class="status-btn warning">
-        <input type="radio" id="s3" name="status" value="遅延">
-        <label for="s3">遅延あり</label>
+        <input type="radio" id="s2" name="status" value="体調不良（赴任可能）">
+        <label for="s2">体調不良（赴任可能）</label>
+      </div>
+      <div class="status-btn danger">
+        <input type="radio" id="s3" name="status" value="体調不良（移動不可）">
+        <label for="s3">⚠️ 体調不良（移動不可）</label>
       </div>
       <div class="status-btn warning">
-        <input type="radio" id="s4" name="status" value="迷子・遅延SOS">
-        <label for="s4">🆘 迷子・遅延SOS</label>
+        <input type="radio" id="s4" name="status" value="遅延あり">
+        <label for="s4">遅延あり</label>
+      </div>
+      <div class="status-btn danger">
+        <input type="radio" id="s5" name="status" value="迷子・遅延SOS">
+        <label for="s5">🆘 迷子・遅延SOS</label>
       </div>
     </div>
 
     <div class="section-title">2. 連絡事項・SOS詳細（任意）</div>
-    <textarea id="note" placeholder="例：〇〇駅の北口で迷っています。現在地にコンビニがあります。"></textarea>
+    <textarea id="note" placeholder="例：38度の熱があります。/ 〇〇駅で迷っています。"></textarea>
 
     <button type="submit" id="submitBtn" class="submit-btn">送信・更新する</button>
   </form>
@@ -136,10 +158,8 @@
       return;
     }
 
-    // 赴任前確認ページ（pre_check.html）へのリンクにIDを付与
     document.getElementById('preCheckLink').href = `pre_check.html?id=${encodeURIComponent(studentId)}`;
 
-    // リアルタイム通信（スプレッドシートの指示が即座に表示される）
     const studentDocRef = doc(db, "students", studentId);
     onSnapshot(studentDocRef, (docSnap) => {
       if (docSnap.exists()) {
@@ -155,12 +175,15 @@
           document.getElementById('note').value = data.note;
         }
 
-        // 人事部からのメッセージ（admin_message）があれば表示
+        // 人事部からの指示（admin_message）の表示ロジック（常時表示 ＋ 入力時は赤枠パルス表示）
         if (data.admin_message && data.admin_message.trim() !== "") {
           adminMsgText.textContent = data.admin_message;
-          adminMsgBox.style.display = "block";
+          adminMsgText.classList.remove('empty');
+          adminMsgBox.classList.add('has-msg');
         } else {
-          adminMsgBox.style.display = "none";
+          adminMsgText.textContent = "※現在、人事担当者からの個別指示はありません。";
+          adminMsgText.classList.add('empty');
+          adminMsgBox.classList.remove('has-msg');
         }
       } else {
         showMessage("該当する学生データがありません。", true);
@@ -174,7 +197,7 @@
 
     const selectedStatus = document.querySelector('input[name="status"]:checked');
     if (!selectedStatus) {
-      alert("ステータスを1つ選択してください。");
+      alert("現在のステータスを1つ選択してください。");
       return;
     }
 
@@ -200,6 +223,7 @@
         timestamp: nowStr
       });
 
+      alert("ステータスを送信・更新しました！");
       showMessage("ステータスを正常に送信・更新しました！", false);
     } catch (err) {
       console.error(err);
